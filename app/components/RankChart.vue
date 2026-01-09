@@ -29,7 +29,6 @@ import {
   Tooltip,
   Legend,
   Title,
-  Filler,
 } from "chart.js";
 
 ChartJS.register(
@@ -39,14 +38,13 @@ ChartJS.register(
   LineElement,
   Tooltip,
   Legend,
-  Title,
-  Filler
+  Title
 );
 
 type Series = {
   domain: string;
-  labels: string[]; // dates
-  ranks: number[]; // ranks aligned with labels
+  labels: string[];
+  ranks: number[];
 };
 
 const props = defineProps<{
@@ -60,8 +58,7 @@ const hasSeries = computed(() => {
 function colorForIndex(i: number) {
   const hue = (i * 137.508) % 360;
   const border = `hsl(${hue} 85% 45%)`;
-  const fill = `hsla(${hue} 85% 45% / 0.18)`;
-  return { border, fill };
+  return { border };
 }
 
 const allDates = computed(() => {
@@ -76,20 +73,19 @@ const chartData = computed(() => {
 
   const datasets = props.data
     ? Object.values(props.data).map((s, idx) => {
-        const { border, fill } = colorForIndex(idx);
+        const { border } = colorForIndex(idx);
 
-        const map = new Map<string, number>();
-        s.labels.forEach((d, i) => map.set(d, s.ranks[i]));
+        const map = new Map<string, number | null>();
+        s.labels.forEach((d, i) => map.set(d, s.ranks[i] ?? null));
 
         return {
           label: s.domain,
-          data: labels.map((d) => map.get(d) ?? null), // null = gap
+          data: labels.map((d) => map.get(d) ?? null),
           borderColor: border,
           pointBackgroundColor: border,
           pointBorderColor: border,
           tension: 0.25,
           spanGaps: true,
-          fill: false,
           borderWidth: 2,
           pointRadius: 3,
           pointHoverRadius: 5,

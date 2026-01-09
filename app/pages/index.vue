@@ -3,8 +3,8 @@
     <header class="mb-4">
       <h1 class="fw-bold">Domain Ranking App</h1>
       <p class="text-muted mb-0">
-        Compare domain rankings over time using our API. Enter up to 10 domains
-        to see their ranking history.
+        Compare domain popularity over time using rankings from the Tranco API.
+        Add up to 10 domains to view their rank history and latest changes.
       </p>
     </header>
 
@@ -20,14 +20,28 @@
         <div v-if="error" class="alert alert-danger mt-3 mb-0" role="alert">
           {{ error }}
         </div>
-
-        <div v-if="pending" class="alert alert-info mt-3 mb-0" role="alert">
-          Loading...
-        </div>
       </div>
 
       <!-- Right: Results -->
       <div class="col-12 col-lg-8">
+        <!-- Loading state -->
+        <div
+          v-if="pending"
+          class="alert alert-info mb-3 mb-0 d-flex align-items-center gap-2"
+          role="alert"
+        >
+          <div
+            class="spinner-border spinner-border-sm"
+            role="status"
+            aria-hidden="true"
+          ></div>
+          <div>
+            <div class="fw-semibold">Fetching rankings…</div>
+            <small class="text-muted">Please wait a moment.</small>
+          </div>
+        </div>
+
+        <!-- Results state -->
         <div
           v-if="data && Object.keys(data).length"
           class="d-flex flex-column gap-3"
@@ -45,6 +59,7 @@
                       <th>Domain</th>
                       <th>Latest date</th>
                       <th class="text-end">Rank</th>
+                      <th class="text-end">Change</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -52,6 +67,28 @@
                       <td class="fw-semibold">{{ item.domain }}</td>
                       <td class="text-muted">{{ item.date }}</td>
                       <td class="text-end fw-semibold">{{ item.rank }}</td>
+                      <td class="text-end">
+                        <span v-if="item.change === null" class="text-muted"
+                          >—</span
+                        >
+
+                        <span
+                          v-else
+                          class="fw-semibold"
+                          :class="
+                            item.change > 0
+                              ? 'text-danger'
+                              : item.change < 0
+                              ? 'text-success'
+                              : 'text-muted'
+                          "
+                        >
+                          {{
+                            item.change > 0 ? "↓" : item.change < 0 ? "↑" : "→"
+                          }}
+                          {{ Math.abs(item.change) }}
+                        </span>
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -59,14 +96,13 @@
             </div>
           </div>
         </div>
-
         <div v-else class="card shadow-sm">
           <div class="card-body">
             <h5 class="card-title">No data</h5>
-            <p class="text-muted mb-0">
+            <small class="d-block text-muted mb-0">
               Enter domains and click <strong>Compare</strong> to see the chart
               and ranks.
-            </p>
+            </small>
           </div>
         </div>
       </div>
@@ -79,6 +115,12 @@ import { computed, onMounted, ref } from "vue";
 
 type ApiSeries = { domain: string; labels: string[]; ranks: number[] };
 type ApiResponse = Record<string, ApiSeries>;
+type LatestItem = {
+  domain: string;
+  date: string;
+  rank: number;
+  change: number | null;
+};
 
 const route = useRoute();
 const router = useRouter();
@@ -158,11 +200,28 @@ onMounted(async () => {
   if (domains.length) await fetchRankings(domains);
 });
 
-const latestList = computed(() => {
+const latestList = computed<LatestItem[]>(() => {
   if (!data.value) return [];
-  return Object.values(data.value).map((s) => {
-    const i = s.labels.length - 1;
-    return { domain: s.domain, date: s.labels[i], rank: s.ranks[i] };
-  });
+
+  return Object.values(data.value)
+    .map((s) => {
+      const last = s.labels.length - 1;
+      if (last < 0) return null;
+
+      const prev = last - 1;
+
+      const latestRank = s.ranks[last];
+      const prevRank = prev >= 0 ? s.ranks[prev] : null;
+
+      if (typeof latestRank !== "number") return null;
+
+      return {
+        domain: s.domain,
+        date: s.labels[last],
+        rank: latestRank,
+        change: typeof prevRank === "number" ? latestRank - prevRank : null,
+      };
+    })
+    .filter((x): x is LatestItem => x !== null);
 });
 </script>
