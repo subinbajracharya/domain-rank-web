@@ -20,6 +20,20 @@
         <div v-if="error" class="alert alert-danger mt-3 mb-0" role="alert">
           {{ error }}
         </div>
+
+        <div
+          v-if="unrankedDomains.length > 0"
+          class="alert alert-warning mt-3 mb-0"
+          role="alert"
+        >
+          <strong>Not ranked in Tranco Top 1M:</strong>
+          <ul class="mb-0 ps-3">
+            <li v-for="d in unrankedDomains" :key="d">
+              {{ d }} - This domain is not ranked within Tranco's Top 1M
+              domains. No data available yet.
+            </li>
+          </ul>
+        </div>
       </div>
 
       <!-- Right: Results -->
@@ -131,6 +145,7 @@ const apiBase = config.public.apiBase;
 const pending = ref(false);
 const error = ref<string | null>(null);
 const data = ref<ApiResponse | null>(null);
+const unrankedDomains = ref<string[]>([]);
 
 function readDomainsFromRoute(): string[] {
   const domainsParam = route.query.domains;
@@ -166,6 +181,7 @@ async function fetchRankings(domains: string[]) {
   pending.value = true;
   error.value = null;
   data.value = null;
+  unrankedDomains.value = [];
 
   try {
     const pathParam = domains.map(encodeURIComponent).join(",");
@@ -173,8 +189,21 @@ async function fetchRankings(domains: string[]) {
 
     const res = await $fetch<ApiResponse>(url);
     data.value = res;
+    const rankedDomains = Object.keys(res);
+    const submittedDomains = domains.map((d) => d.toLowerCase());
+    unrankedDomains.value = submittedDomains.filter(
+      (d) => !rankedDomains.includes(d)
+    );
   } catch (e: any) {
     error.value = e?.data?.message || e?.message || "Failed to fetch rankings";
+    const msg = error.value;
+    if (msg && !msg.includes("None of the provided domains")) {
+      const rankedDomains = Object.keys(data.value || {});
+      const submittedDomains = domains.map((d) => d.toLowerCase());
+      unrankedDomains.value = submittedDomains.filter(
+        (d) => !rankedDomains.includes(d)
+      );
+    }
   } finally {
     pending.value = false;
   }
@@ -193,6 +222,7 @@ function onClear() {
   setUrlDomains([]);
   data.value = null;
   error.value = null;
+  unrankedDomains.value = [];
 }
 
 onMounted(async () => {

@@ -10,6 +10,14 @@
       <label class="form-label fw-semibold">Domains</label>
 
       <div
+        v-if="error"
+        class="alert alert-danger py-2 px-3 mb-2 small"
+        role="alert"
+      >
+        {{ error }}
+      </div>
+
+      <div
         class="d-flex flex-wrap gap-2 align-items-center border rounded-3 p-2 bg-white"
         style="min-height: 44px; cursor: text"
         @click="focusInput"
@@ -109,6 +117,11 @@ const emit = defineEmits<{
 const domains = ref<string[]>([]);
 const input = ref("");
 const inputEl = ref<HTMLInputElement | null>(null);
+const error = ref<string | null>(null);
+
+// Regex for valid domain format (basic validation)
+const DOMAIN_REGEX =
+  /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/;
 
 watch(
   () => props.initialDomains,
@@ -125,6 +138,14 @@ function focusInput() {
   inputEl.value?.focus();
 }
 
+function validateDomain(s: string): string | null {
+  if (!s) return null;
+  if (!DOMAIN_REGEX.test(s)) {
+    return `Invalid domain format: "${s}"`;
+  }
+  return null;
+}
+
 function normalizeDomain(s: string) {
   let v = s.trim().toLowerCase();
   if (!v) return "";
@@ -138,13 +159,21 @@ function normalizeDomain(s: string) {
 }
 
 function addDomains(list: string[]) {
+  error.value = null;
+
   for (const raw of list) {
     if (domains.value.length >= 10) break;
 
-    const d = normalizeDomain(raw);
-    if (!d) continue;
+    const normalized = normalizeDomain(raw);
+    if (!normalized) continue;
 
-    if (!domains.value.includes(d)) domains.value.push(d);
+    const validationError = validateDomain(normalized);
+    if (validationError) {
+      error.value = validationError;
+      continue;
+    }
+
+    if (!domains.value.includes(normalized)) domains.value.push(normalized);
   }
 }
 
@@ -168,7 +197,6 @@ function onKeydown(e: KeyboardEvent) {
     addFromInput();
   }
 
-  // Backspace removes last chip if input empty
   if (e.key === "Backspace" && !input.value && domains.value.length) {
     domains.value.pop();
   }
@@ -178,7 +206,6 @@ function onPaste(e: ClipboardEvent) {
   const text = e.clipboardData?.getData("text") ?? "";
   if (!text) return;
 
-  // If user pastes multiple, convert to chips
   if (text.includes("\n") || text.includes(",") || text.includes(" ")) {
     e.preventDefault();
     addDomains(text.split(/[\s,\n]+/));
@@ -192,6 +219,7 @@ function submit() {
 function clearAll() {
   domains.value = [];
   input.value = "";
+  error.value = null;
   emit("clear");
 }
 
