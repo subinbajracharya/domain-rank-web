@@ -1,105 +1,166 @@
 <template>
-  <div class="card shadow-sm">
-    <div class="card-body">
-      <h5 class="card-title mb-2">Compare domains</h5>
-      <small class="d-block text-muted mb-3">
-        Type a domain name, press Enter to add it and start comparing. Click ×
-        to remove.
-      </small>
+  <div>
+    <div class="pb-3 border-bottom mb-4">
+      <h5 class="fw-semibold mb-1">Compare Domains</h5>
+      <p class="text-muted small mb-0">
+        Enter domain names, one per line. Max 10 domains.
+      </p>
+    </div>
 
-      <label class="form-label fw-semibold">Domains</label>
-
-      <div
-        v-if="error"
-        class="alert alert-danger py-2 px-3 mb-2 small"
-        role="alert"
-      >
-        {{ error }}
-      </div>
+    <!-- Domain Input Area -->
+    <div class="mb-3">
+      <label class="form-label fw-medium">Domains</label>
 
       <div
-        class="d-flex flex-wrap gap-2 align-items-center border rounded-3 p-2 bg-white"
-        style="min-height: 44px; cursor: text"
+        class="form-control d-flex flex-wrap align-items-center gap-2"
+        :class="{ 'is-invalid': error }"
+        style="min-height: 52px; cursor: text"
         @click="focusInput"
       >
+        <!-- Domain Pills -->
         <span
-          v-for="d in domains"
-          :key="d"
-          class="badge rounded-pill d-inline-flex align-items-center gap-2 border border-primary-subtle text-primary bg-primary bg-opacity-10 px-3 py-2"
-          title="Click × to remove"
+          v-for="(domain, index) in domains"
+          :key="domain"
+          class="badge d-flex align-items-center gap-1"
+          :style="{ background: getDomainColor(index), color: '#fff' }"
         >
-          <span class="fw-normal">{{ d }}</span>
+          <span class="text-truncate" style="max-width: 120px">{{
+            domain
+          }}</span>
           <button
             type="button"
-            class="btn btn-sm p-0 border-0 lh-1 text-primary"
+            class="btn btn-sm btn-link text-white p-0 text-decoration-none lh-1"
+            style="font-size: 1.2rem"
+            @click.stop="removeDomain(domain)"
             aria-label="Remove domain"
-            @click.stop="removeDomain(d)"
           >
-            &times;
+            ×
           </button>
         </span>
 
+        <!-- Input -->
         <input
           ref="inputEl"
           v-model="input"
           class="form-control border-0 shadow-none p-0 flex-grow-1 bg-transparent"
-          style="min-width: 180px"
-          placeholder="Type domain and press Enter"
+          style="min-width: 150px; outline: none"
+          placeholder="Type and press Enter..."
           @keydown="onKeydown"
           @blur="addFromInput"
           @paste="onPaste"
         />
       </div>
 
-      <div class="form-text mt-2">{{ domains.length }}/10 domains</div>
-
-      <div class="d-flex gap-2 mt-3">
-        <button class="btn btn-dark" type="button" @click="submit">
-          Compare
-        </button>
+      <div class="d-flex justify-content-between align-items-center mt-2">
+        <span class="small text-muted">{{ domains.length }}/10 domains</span>
         <button
-          class="btn btn-outline-secondary"
+          v-if="domains.length > 0"
           type="button"
+          class="btn btn-link btn-sm text-decoration-none p-0"
           @click="clearAll"
         >
-          Clear
+          Clear all
         </button>
       </div>
+    </div>
 
-      <!-- Optional examples -->
-      <div class="mt-3">
-        <div class="text-muted mb-2 small">Try examples:</div>
-        <div class="d-flex flex-wrap gap-2">
-          <button
-            type="button"
-            class="btn btn-sm btn-outline-primary"
-            @click="
-              setExample([
-                'commbank.com.au',
-                'westpac.com.au',
-                'nab.com.au',
-                'anz.com.au',
-                'macquarie.com.au',
-              ])
-            "
-          >
-            Major Australian banks
-          </button>
-          <button
-            type="button"
-            class="btn btn-sm btn-outline-primary"
-            @click="setExample(['google.com', 'facebook.com', 'openai.com'])"
-          >
-            Big tech
-          </button>
-          <button
-            type="button"
-            class="btn btn-sm btn-outline-primary"
-            @click="setExample(['abc.net.au', 'smh.com.au', 'theguardian.com'])"
-          >
-            News sites
-          </button>
-        </div>
+    <!-- Error Message -->
+    <div
+      v-if="error"
+      class="alert alert-danger py-2 px-3 mb-3 small"
+      role="alert"
+    >
+      <div class="d-flex align-items-center gap-2">
+        <span>{{ error }}</span>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="d-flex gap-2 mb-4">
+      <button
+        class="btn btn-primary flex-grow-1"
+        type="button"
+        :disabled="domains.length === 0 || pending"
+        @click="submit"
+      >
+        <span
+          v-if="pending"
+          class="d-flex align-items-center justify-content-center gap-2"
+        >
+          <span
+            class="spinner-border spinner-border-sm"
+            role="status"
+            aria-hidden="true"
+          ></span>
+          Comparing...
+        </span>
+        <span v-else>Compare Domains</span>
+      </button>
+    </div>
+
+    <!-- Quick Examples -->
+    <div class="pt-3 border-top">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <span class="small fw-medium text-muted">Quick Examples</span>
+      </div>
+
+      <div class="d-flex flex-wrap gap-2">
+        <button
+          type="button"
+          class="btn btn-outline-secondary btn-sm"
+          @click="
+            setExample([
+              'google.com',
+              'facebook.com',
+              'amazon.com',
+              'apple.com',
+            ])
+          "
+        >
+          Tech Giants
+        </button>
+        <button
+          type="button"
+          class="btn btn-outline-secondary btn-sm"
+          @click="
+            setExample([
+              'netflix.com',
+              'hulu.com',
+              'disneyplus.com',
+              'hbomax.com',
+            ])
+          "
+        >
+          Streaming
+        </button>
+        <button
+          type="button"
+          class="btn btn-outline-secondary btn-sm"
+          @click="
+            setExample([
+              'reddit.com',
+              'twitter.com',
+              'instagram.com',
+              'tiktok.com',
+            ])
+          "
+        >
+          Social Media
+        </button>
+        <button
+          type="button"
+          class="btn btn-outline-secondary btn-sm"
+          @click="
+            setExample([
+              'commbank.com.au',
+              'westpac.com.au',
+              'anz.com.au',
+              'nab.com.au',
+            ])
+          "
+        >
+          Australian Banks
+        </button>
       </div>
     </div>
   </div>
@@ -118,8 +179,26 @@ const domains = ref<string[]>([]);
 const input = ref("");
 const inputEl = ref<HTMLInputElement | null>(null);
 const error = ref<string | null>(null);
+const pending = ref(false);
 
-// Regex for valid domain format (basic validation)
+const colorPalette = [
+  "#667eea",
+  "#f59e0b",
+  "#10b981",
+  "#ef4444",
+  "#8b5cf6",
+  "#ec4899",
+  "#06b6d4",
+  "#84cc16",
+  "#f97316",
+  "#6366f1",
+];
+
+function getDomainColor(index: number): string {
+  return colorPalette[index % colorPalette.length];
+}
+
+// Regex for valid domain format
 const DOMAIN_REGEX =
   /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/;
 
@@ -149,12 +228,11 @@ function validateDomain(s: string): string | null {
 function normalizeDomain(s: string) {
   let v = s.trim().toLowerCase();
   if (!v) return "";
-
   v = v.replace(/^https?:\/\//, "");
-  v = v.split("/")[0] ?? "";
+  const parts = v.split("/");
+  v = parts[0] ?? "";
   v = v.replace(/^www\./, "");
   v = v.replace(/[,\s.]+$/, "");
-
   return v;
 }
 
@@ -178,11 +256,16 @@ function addDomains(list: string[]) {
 }
 
 function addFromInput() {
-  const v = input.value;
-  if (!v.trim()) return;
+  const v = input.value?.trim() || "";
+  if (!v) return;
 
-  // allow comma-separated typing too
-  addDomains(v.split(/[\n,]+/));
+  const parts = v
+    .split(/[\n,]+/)
+    .map((s) => s.trim())
+    .filter((s): s is string => Boolean(s));
+  if (parts.length > 0) {
+    addDomains(parts);
+  }
   input.value = "";
 }
 
@@ -213,6 +296,10 @@ function onPaste(e: ClipboardEvent) {
 }
 
 function submit() {
+  if (domains.value.length === 0) {
+    error.value = "Please enter at least one domain.";
+    return;
+  }
   emit("submit", domains.value.slice(0, 10));
 }
 
