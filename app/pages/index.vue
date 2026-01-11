@@ -89,38 +89,36 @@
           <!-- Unranked Domains Alert -->
           <div
             v-if="unrankedDomains.length > 0"
-            class="alert alert-warning alert-dismissible fade show mt-3"
+            class="alert alert-warning d-flex align-items-start gap-2 fade show mt-3"
             role="alert"
           >
-            <div class="d-flex align-items-start gap-2">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="flex-shrink-0 mt-1"
-              >
-                <path
-                  d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
-                ></path>
-                <line x1="12" y1="9" x2="12" y2="13"></line>
-                <line x1="12" y1="17" x2="12.01" y2="17"></line>
-              </svg>
-              <div>
-                <strong>Not ranked in Tranco Top 1M:</strong>
-                <ul class="mb-0 ps-3 mt-2 small">
-                  <li v-for="d in unrankedDomains" :key="d">{{ d }}</li>
-                </ul>
-              </div>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="flex-shrink-0 mt-1"
+            >
+              <path
+                d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+              ></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <div class="flex-grow-1">
+              <strong>Not ranked in Tranco Top 1M:</strong>
+              <ul class="mb-0 ps-3 mt-1 small">
+                <li v-for="d in unrankedDomains" :key="d">{{ d }}</li>
+              </ul>
             </div>
             <button
               type="button"
-              class="btn-close position-relative end-0 top-0 mt-2 me-2"
+              class="btn-close position-absolute top-0 end-0 m-2"
               data-bs-dismiss="alert"
               aria-label="Close"
               @click="unrankedDomains = []"
@@ -343,7 +341,7 @@ async function fetchRankings(domains: string[]) {
   pending.value = true;
   error.value = null;
   data.value = null;
-  unrankedDomains.value = [];
+  unrankedDomains.value = domains.map((d) => d.toLowerCase());
 
   try {
     const pathParam = domains.map(encodeURIComponent).join(",");
@@ -351,19 +349,23 @@ async function fetchRankings(domains: string[]) {
     const res = await $fetch<ApiResponse>(url);
     data.value = res;
     const rankedDomains = Object.keys(res);
-    const submittedDomains = domains.map((d) => d.toLowerCase());
-    unrankedDomains.value = submittedDomains.filter(
+    unrankedDomains.value = unrankedDomains.value.filter(
       (d) => !rankedDomains.includes(d)
     );
   } catch (e: any) {
-    error.value = e?.data?.message || e?.message || "Failed to fetch rankings";
-    const msg = error.value;
-    if (msg && !msg.includes("None of the provided domains")) {
+    const msg = e?.data?.message || e?.message || "Failed to fetch rankings";
+    // If all domains are unranked, show warning instead of error
+    if (msg.includes("None of the provided domains")) {
+      error.value = null;
+    } else {
+      error.value = msg;
+      // Try to extract unranked from partial data
       const rankedDomains = Object.keys(data.value || {});
-      const submittedDomains = domains.map((d) => d.toLowerCase());
-      unrankedDomains.value = submittedDomains.filter(
-        (d) => !rankedDomains.includes(d)
-      );
+      if (rankedDomains.length > 0) {
+        unrankedDomains.value = domains
+          .map((d) => d.toLowerCase())
+          .filter((d) => !rankedDomains.includes(d));
+      }
     }
   } finally {
     pending.value = false;
