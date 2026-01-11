@@ -54,7 +54,7 @@
 
           <!-- Error Alert -->
           <div
-            v-if="error"
+            v-if="error && fetchAttempted"
             class="alert alert-danger alert-dismissible fade show mt-3"
             role="alert"
           >
@@ -88,7 +88,7 @@
 
           <!-- Unranked Domains Alert -->
           <div
-            v-if="unrankedDomains.length > 0"
+            v-if="unrankedDomains.length > 0 && fetchAttempted"
             class="alert alert-warning d-flex align-items-start gap-2 fade show mt-3"
             role="alert"
           >
@@ -265,6 +265,7 @@ const apiBase = config.public.apiBase;
 
 const pending = ref(false);
 const error = ref<string | null>(null);
+const fetchAttempted = ref(false);
 const data = ref<ApiResponse | null>(null);
 const unrankedDomains = ref<string[]>([]);
 
@@ -340,6 +341,7 @@ function setUrlDomains(domains: string[]) {
 async function fetchRankings(domains: string[]) {
   pending.value = true;
   error.value = null;
+  fetchAttempted.value = false;
   data.value = null;
   unrankedDomains.value = domains.map((d) => d.toLowerCase());
 
@@ -347,12 +349,14 @@ async function fetchRankings(domains: string[]) {
     const pathParam = domains.map(encodeURIComponent).join(",");
     const url = `${apiBase}/rankings/${pathParam}`;
     const res = await $fetch<ApiResponse>(url);
+    fetchAttempted.value = true;
     data.value = res;
     const rankedDomains = Object.keys(res);
     unrankedDomains.value = unrankedDomains.value.filter(
       (d) => !rankedDomains.includes(d)
     );
   } catch (e: any) {
+    fetchAttempted.value = true;
     const msg = e?.data?.message || e?.message || "Failed to fetch rankings";
     // If all domains are unranked, show warning instead of error
     if (msg.includes("None of the provided domains")) {
@@ -385,6 +389,7 @@ function onClear() {
   setUrlDomains([]);
   data.value = null;
   error.value = null;
+  fetchAttempted.value = false;
   unrankedDomains.value = [];
 }
 
