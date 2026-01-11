@@ -62,7 +62,13 @@ const hasSeries = computed(() => {
   return !!props.data && Object.keys(props.data).length > 0;
 });
 
-const colorPalette = [
+type ColorSet = {
+  border: string;
+  background: string;
+  point: string;
+};
+
+const colorPalette: ColorSet[] = [
   {
     border: "#667eea",
     background: "rgba(102, 126, 234, 0.1)",
@@ -115,8 +121,14 @@ const colorPalette = [
   },
 ];
 
-function colorForIndex(i: number) {
-  return colorPalette[i % colorPalette.length];
+function colorForIndex(i: number): ColorSet {
+  const defaultColor: ColorSet = {
+    border: "#667eea",
+    background: "rgba(102, 126, 234, 0.1)",
+    point: "#667eea",
+  };
+  const idx = i % colorPalette.length;
+  return colorPalette[idx] ?? defaultColor;
 }
 
 const allDates = computed(() => {

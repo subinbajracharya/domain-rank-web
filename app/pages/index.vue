@@ -206,7 +206,7 @@
                       <span v-else class="text-muted">—</span>
                     </td>
                     <td class="text-end">
-                      <span class="badge fs-6" :class="getRankClass(item.rank)">
+                      <span class="badge" :class="getRankClass(item.rank)">
                         #{{ item.rank.toLocaleString() }}
                       </span>
                     </td>
@@ -288,14 +288,15 @@ const colorPalette = [
 function getDomainColor(domain: string): string {
   if (!domainColors.has(domain)) {
     const index = domainColors.size % colorPalette.length;
-    domainColors.set(domain, colorPalette[index]);
+    const color = colorPalette[index] || "#667eea";
+    domainColors.set(domain, color);
   }
-  return domainColors.get(domain)!;
+  return domainColors.get(domain) || "#667eea";
 }
 
 function getTrendClass(change: number): string {
-  if (change > 0) return "bg-danger bg-opacity-10 text-danger"; // Higher rank = worse
-  if (change < 0) return "bg-success bg-opacity-10 text-success"; // Lower rank = better
+  if (change > 0) return "bg-danger bg-opacity-10 text-danger";
+  if (change < 0) return "bg-success bg-opacity-10 text-success";
   return "bg-secondary bg-opacity-10 text-secondary";
 }
 

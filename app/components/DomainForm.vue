@@ -7,7 +7,6 @@
       </p>
     </div>
 
-    <!-- Domain Input Area -->
     <div class="mb-3">
       <label class="form-label fw-medium">Domains</label>
 
@@ -17,7 +16,6 @@
         style="min-height: 52px; cursor: text"
         @click="focusInput"
       >
-        <!-- Domain Pills -->
         <span
           v-for="(domain, index) in domains"
           :key="domain"
@@ -38,7 +36,6 @@
           </button>
         </span>
 
-        <!-- Input -->
         <input
           ref="inputEl"
           v-model="input"
@@ -195,7 +192,7 @@ const colorPalette = [
 ];
 
 function getDomainColor(index: number): string {
-  return colorPalette[index % colorPalette.length];
+  return colorPalette[index % colorPalette.length] || "#667eea";
 }
 
 // Regex for valid domain format
@@ -291,7 +288,11 @@ function onPaste(e: ClipboardEvent) {
 
   if (text.includes("\n") || text.includes(",") || text.includes(" ")) {
     e.preventDefault();
-    addDomains(text.split(/[\s,\n]+/));
+    const parts = text
+      .split(/[\s,\n]+/)
+      .map((s) => s.trim())
+      .filter((s): s is string => Boolean(s));
+    addDomains(parts);
   }
 }
 
